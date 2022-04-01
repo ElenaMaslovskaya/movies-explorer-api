@@ -4,33 +4,60 @@ const NotFoundError = require('../errors/NotFoundError');
 const ForbiddenError = require('../errors/ForbiddenError');
 
 module.exports.createMovie = (req, res, next) => {
-  const { name, link } = req.body;
+  const {
+    country,
+    director,
+    duration,
+    year,
+    description,
+    image,
+    trailerLink,
+    nameRU,
+    nameEN,
+    thumbnail,
+    movieId,
+  } = req.body;
 
   Movie.create({
-    name,
-    link,
+    country,
+    director,
+    duration,
+    year,
+    description,
+    image,
+    trailerLink,
+    nameRU,
+    nameEN,
+    thumbnail,
+    movieId,
     owner: req.user._id,
   })
-    .then((card) => res.status(201).send(card))
+    .then((movie) => res.status(201).send(movie))
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        next(new BadRequestError('Указаны некорректные данные при создании карточки'));
+        next(new BadRequestError('Указаны некорректные данные'));
       } else {
         next(err);
       }
     });
 };
 
+module.exports.getMovies = (req, res, next) => {
+  Movie.find({ owner: req.user._id })
+    .then((movies) => res.status(200).send({ data: movies }))
+    .catch(next);
+};
+
 module.exports.deleteMovie = (req, res, next) => {
-  Movie.findById(req.params.cardId)
-    .orFail(() => new NotFoundError('Карточка не найдена'))
-    .then((card) => {
-      if (card.owner.toString() !== req.user._id) {
+  Movie.findById(req.params.movieId)
+    .orFail(() => new NotFoundError('Фильм не найден'))
+    .then((movie) => {
+      if (movie.owner.toString() !== req.user._id) {
         throw new ForbiddenError('Недостаточно прав для выполнения операции');
       }
-      Movie.findByIdAndDelete(req.params.cardId)
-        .then((cardData) => {
-          res.send({ data: cardData });
+      Movie.findByIdAndDelete(req.params._id)
+        .then((movieData) => {
+          res.send({ data: movieData });
         })
         .catch(next);
     })

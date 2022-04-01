@@ -19,11 +19,10 @@ module.exports.createUser = (req, res, next) => {
       email,
       password: hash,
     }))
-    .then(() => res.status(201).send({
-      data:
-      {
-        name, email,
-      },
+    .then((user) => res.status(201).send({
+      _id: user.id,
+      name: user.name,
+      email: user.email,
     }))
     .catch((err) => {
       if (err.name === 'ValidationError') {
@@ -47,11 +46,11 @@ module.exports.getCurrentUser = (req, res, next) => {
 };
 
 module.exports.updateUserInfo = (req, res, next) => {
-  const { name, about } = req.body;
+  const { name, email } = req.body;
 
   User.findByIdAndUpdate(
     req.user._id,
-    { name, about },
+    { name, email },
     { new: true, runValidators: true },
   )
     .orFail(() => new NotFoundError('Запрашиваемый пользователь не найден'))
