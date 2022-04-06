@@ -3,40 +3,34 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
 const { errors } = require('celebrate');
-const users = require('./routes/users');
-const movies = require('./routes/movies');
-const auth = require('./middlewares/auth');
 const { requestLogger, errorLogger } = require('./middlewares/logger');
-const { createUser, login } = require('./controllers/users');
+const { DB_ADDRESS_DEV } = require('./utils/config');
+const limiter = require('./middlewares/limiter');
 const NotFoundError = require('./errors/NotFoundError');
-const { validateUser, validateLogin } = require('./middlewares/validations');
+const router = require('./routes/index');
 require('dotenv').config();
 
-const { PORT = 3001 } = process.env;
+const { PORT = 3001, NODE_ENV, DB_ADDRESS_PROD } = process.env;
 
 const app = express();
 
 app.use(cors());
 
-mongoose.connect('mongodb://localhost:27017/bitfilmsdb', {
+mongoose.connect(NODE_ENV === 'production' ? DB_ADDRESS_PROD : DB_ADDRESS_DEV, {
   useNewUrlParser: true,
+  useUnifiedTopology: true,
 });
+
+// подключаем логгер запросов
+app.use(requestLogger);
 
 app.use(helmet());
 app.use(bodyParser.json());
 
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // за 15 минут
-  max: 100, // можно совершить максимум 100 запросов с одного IP
-});
-
 // подключаем rate-limiter
 app.use(limiter);
-
-// подключаем логгер запросов
-app.use(requestLogger);
+app.use('/', router);
 
 app.get('/crash-test', () => {
   setTimeout(() => {
@@ -44,24 +38,12 @@ app.get('/crash-test', () => {
   }, 0);
 });
 
-// роуты, не требующие авторизации,
-// например, регистрация и логин
-app.post('/signup', validateUser, createUser);
-app.post('/signin', validateLogin, login);
-
-// авторизация
-app.use(auth);
-
-// роуты, которым авторизация нужна
-app.use('/', users);
-app.use('/', movies);
-
-// подключаем логгер ошибок
-app.use(errorLogger);
-
 app.use(() => {
   throw new NotFoundError('Страница не найдена');
 });
+
+// подключаем логгер ошибок
+app.use(errorLogger);
 
 // обработчик ошибок celebrate
 app.use(errors());
