@@ -19,10 +19,12 @@ module.exports.createUser = (req, res, next) => {
       email,
       password: hash,
     }))
-    .then((user) => res.status(201).send({
-      _id: user.id,
-      name: user.name,
-      email: user.email,
+    .then(() => res.status(201).send({
+      data:
+      {
+        name,
+        email,
+      },
     }))
     .catch((err) => {
       if (err.name === 'ValidationError') {
@@ -40,7 +42,7 @@ module.exports.getCurrentUser = (req, res, next) => {
   User.findById(req.user._id)
     .orFail(() => new NotFoundError('Запрашиваемый пользователь не найден'))
     .then((user) => {
-      res.status(200).send(user);
+      res.status(200).send({ data: user });
     })
     .catch(next);
 };
@@ -60,6 +62,10 @@ module.exports.updateUserInfo = (req, res, next) => {
     .catch((err) => {
       if (err.name === 'ValidationError') {
         next(new BadRequestError('Переданы некорректные данные'));
+      } else if (err.code === 11000) {
+        next(new ConflictError('Пользователь с таким email уже зарегистрирован'));
+      } else if (err.name === 'CastError') {
+        next(new BadRequestError('Указаны некорректные данные'));
       } else {
         next(err);
       }

@@ -55,7 +55,7 @@ module.exports.deleteMovie = (req, res, next) => {
       if (movie.owner.toString() !== req.user._id) {
         throw new ForbiddenError('Недостаточно прав для выполнения операции');
       }
-      Movie.findByIdAndDelete(req.params._id)
+      Movie.findByIdAndDelete(req.params.movieId)
         .then((movieData) => {
           res.send({ data: movieData });
         })
